@@ -21,6 +21,37 @@ from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
 load_dotenv()
 
+embeddings = OpenAIEmbeddings()
+
+if not os.path.exists("./db"):
+
+    print("CREANDO DB")
+    doc_reader = PdfReader('./documento.pdf')
+
+    raw_text = ''
+    for i, page in enumerate(doc_reader.pages):
+        text = page.extract_text()
+        if text:
+            raw_text += text
+
+    text_splitter = CharacterTextSplitter(        
+        separator = "\n",
+        chunk_size = 300,
+        chunk_overlap  = 30, 
+        length_function = len,
+    )
+    texts = text_splitter.split_text(raw_text)
+
+    vectorstore = FAISS.from_texts(texts, embeddings)
+
+    vectorstore.save_local("./db")
+
+else:
+    print("LOADING DB")
+    vectorstore = FAISS.load_local("./db", embeddings)
+
+
+'''
 doc_reader = PdfReader('./documento.pdf')
 
 raw_text = ''
@@ -40,8 +71,10 @@ texts = text_splitter.split_text(raw_text)
 embeddings = OpenAIEmbeddings()
 
 docsearch = FAISS.from_texts(texts, embeddings)
+'''
 
-retriever = docsearch.as_retriever(search_type="similarity", search_kwargs={"k":4})
+retriever = vectorstore.as_retriever(search_type="similarity", search_kwargs={"k":1})
+#retriever = docsearch.as_retriever(search_type="similarity", search_kwargs={"k":4})
 
 template = """Usa el siguiente contexto para responder las preguntas.
 La respuesta debe estar en 3ra persona.
@@ -54,8 +87,9 @@ Pregunta: {question}
 Respuesta:"""
 QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
 
+#llm=OpenAI(model="gpt-4-1106-preview"), 
 rqa = RetrievalQA.from_chain_type(
-    llm=OpenAI(model="gpt-4-1106-preview"), 
+    llm=OpenAI(), 
     chain_type="stuff", 
     retriever=retriever, 
     return_source_documents=True,
