@@ -71,7 +71,11 @@ chain = (
 
 app = FastAPI()
 
-@app.get("/response")
+@app.get("/")
+async def root():
+    return "ok!"
+
+@app.get("/get_response")
 async def get_response(user_name: str, query: str):
     res = {
         "user_name": user_name,
@@ -82,11 +86,9 @@ async def get_response(user_name: str, query: str):
 
     return res
 
-@app.post("/response2")
+@app.post("/response")
 async def get_response2(request: Request):
     data = await request.json()
-    print(data["query"])
-    print(data["user_name"])
     query = data["query"]
     res = chain.invoke(query)
     return res
